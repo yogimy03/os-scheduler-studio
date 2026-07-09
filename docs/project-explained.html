@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OS Scheduler Studio, explained from scratch</title>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --card: #ffffff;
+    --ink: #1f2933;
+    --muted: #5b6672;
+    --line: #e3e7ec;
+    --accent: #2563a8;
+    --accent-soft: #e8f0fa;
+    --code-bg: #0f1728;
+    --code-ink: #e6edf6;
+    --warn-bg: #fff5e6;
+    --warn-line: #f0c078;
+    --good-bg: #eaf7ee;
+    --good-line: #8fcea3;
+    --idea-bg: #eef2fb;
+    --idea-line: #9db7e0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1420;
+      --card: #151d2b;
+      --ink: #e6edf6;
+      --muted: #9aa7b6;
+      --line: #263141;
+      --accent: #6bb0e8;
+      --accent-soft: #17273c;
+      --code-bg: #0a0f1a;
+      --code-ink: #e6edf6;
+      --warn-bg: #2c2418;
+      --warn-line: #6b5a2f;
+      --good-bg: #17291d;
+      --good-line: #35603f;
+      --idea-bg: #182338;
+      --idea-line: #34517e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.65;
+    font-size: 17px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+  header.hero {
+    background: linear-gradient(135deg, #1f3350, #10203a);
+    color: #f4f8ff;
+    padding: 56px 0 44px;
+  }
+  header.hero h1 { margin: 0 0 10px; font-size: 34px; letter-spacing: 0.2px; }
+  header.hero p { margin: 0; color: #c7d6ea; font-size: 18px; max-width: 760px; }
+  header.hero .tag {
+    display: inline-block; margin-bottom: 18px; padding: 4px 12px;
+    background: rgba(255,255,255,0.12); border-radius: 999px;
+    font-size: 13px; letter-spacing: 0.4px; text-transform: uppercase;
+  }
+  .layout { display: grid; grid-template-columns: 240px 1fr; gap: 36px; padding: 36px 0 80px; }
+  nav.toc {
+    position: sticky; top: 20px; align-self: start;
+    font-size: 14.5px; max-height: calc(100vh - 40px); overflow: auto;
+  }
+  nav.toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin: 0 0 10px; }
+  nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 4px 0; border-left: 2px solid transparent; padding-left: 10px; }
+  nav.toc a:hover { color: var(--accent); border-left-color: var(--accent); }
+  main { min-width: 0; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 26px 30px; margin-bottom: 22px; }
+  section h2 { margin-top: 6px; font-size: 24px; border-bottom: 2px solid var(--accent-soft); padding-bottom: 10px; }
+  section h3 { font-size: 19px; margin-top: 28px; }
+  p, li { color: var(--ink); }
+  code { font-family: "SF Mono", "Fira Code", Consolas, monospace; font-size: 14.5px; background: var(--accent-soft); color: var(--accent); padding: 1px 6px; border-radius: 5px; }
+  pre { background: var(--code-bg); color: var(--code-ink); padding: 16px 18px; border-radius: 10px; overflow-x: auto; font-size: 14px; line-height: 1.5; }
+  pre code { background: none; color: inherit; padding: 0; font-size: 14px; }
+  .callout { border-radius: 10px; padding: 14px 18px; margin: 18px 0; border-left: 4px solid; }
+  .callout .lbl { font-weight: 700; display: block; margin-bottom: 4px; font-size: 14px; letter-spacing: 0.3px; }
+  .analogy { background: var(--idea-bg); border-left-color: var(--idea-line); }
+  .idea { background: var(--good-bg); border-left-color: var(--good-line); }
+  .challenge { background: var(--warn-bg); border-left-color: var(--warn-line); }
+  table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 15px; }
+  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; }
+  th { background: var(--accent-soft); }
+  img { max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); margin: 10px 0; }
+  .fig { margin: 20px 0; }
+  .fig figcaption { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  .pill { display: inline-block; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 600; }
+  .qa { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; }
+  .qa .q { font-weight: 700; }
+  .steps { counter-reset: step; list-style: none; padding-left: 0; }
+  .steps > li { counter-increment: step; position: relative; padding-left: 44px; margin-bottom: 16px; }
+  .steps > li::before {
+    content: counter(step); position: absolute; left: 0; top: 0;
+    width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;
+  }
+  footer { color: var(--muted); font-size: 14px; text-align: center; padding: 30px 0 50px; }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; max-height: none; }
+  }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <span class="tag">Read this to become fluent</span>
+    <h1>OS Scheduler Studio, explained from scratch</h1>
+    <p>This page takes you from knowing nothing to being able to stand up and explain the whole project with confidence. It starts with the smallest piece, a single process, and builds up one idea at a time. No prior Java or operating systems knowledge is assumed.</p>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="layout">
+  <nav class="toc">
+    <h2>On this page</h2>
+    <a href="#big-picture">1. The big picture</a>
+    <a href="#smallest">2. The smallest piece: a process</a>
+    <a href="#metrics">3. What we measure</a>
+    <a href="#worked">4. A worked example by hand</a>
+    <a href="#one-language">5. The one idea that keeps it clean</a>
+    <a href="#cpu-build">6. Building the CPU algorithms</a>
+    <a href="#disk">7. Disk scheduling</a>
+    <a href="#page">8. Page replacement</a>
+    <a href="#pictures">9. Turning results into pictures</a>
+    <a href="#frontends">10. Two front ends, one core</a>
+    <a href="#challenges">11. Challenges and fixes</a>
+    <a href="#explain">12. How to explain it out loud</a>
+    <a href="#glossary">13. Glossary</a>
+  </nav>
+
+  <main>
+
+  <section id="big-picture">
+    <h2>1. The big picture</h2>
+    <p>A computer has one CPU but many programs that all want to run. Something has to decide who goes first, who waits, and for how long. That decision maker is called the <span class="pill">scheduler</span>, and the rules it uses are called scheduling algorithms. This project builds a small laboratory where you can try those rules, feed them your own inputs, and see exactly what happens.</p>
+    <div class="callout analogy">
+      <span class="lbl">Everyday analogy</span>
+      Think of a single doctor with a waiting room full of patients. The doctor can only see one patient at a time. The order the doctor calls people in, and whether an urgent case can jump the queue, is a scheduling decision. Different clinics use different rules, and each rule leads to different average waiting times.
+    </div>
+    <p>The project covers three families of scheduling, because an operating systems course usually teaches all three:</p>
+    <ul>
+      <li><strong>CPU scheduling</strong>: which program gets the processor next.</li>
+      <li><strong>Disk scheduling</strong>: the order to move the disk head so it travels the least.</li>
+      <li><strong>Page replacement</strong>: which page of memory to throw out when memory is full.</li>
+    </ul>
+    <p>They look different, but they share a shape. In each one you have a set of requests, a rule for choosing what to do next, and some numbers that tell you how good the rule was. Once you see that shape, the whole project clicks into place.</p>
+  </section>
+
+  <section id="smallest">
+    <h2>2. The smallest piece: a process</h2>
+    <p>The tiniest building block of the CPU side is a single process. In this project a process is just four numbers with a name, and it lives in a Java <em>record</em>, which is a short way to declare a small, unchangeable bundle of data.</p>
+    <pre><code>public record CpuProcess(String id, int arrivalTime, int burstTime, int priority) { ... }</code></pre>
+    <table>
+      <tr><th>Field</th><th>Meaning</th></tr>
+      <tr><td><code>id</code></td><td>A short label like <code>P1</code> that shows up in the charts.</td></tr>
+      <tr><td><code>arrivalTime</code></td><td>The moment the process shows up and starts waiting.</td></tr>
+      <tr><td><code>burstTime</code></td><td>How much CPU time the process needs to finish.</td></tr>
+      <tr><td><code>priority</code></td><td>How important it is. A smaller number means more important.</td></tr>
+    </table>
+    <div class="callout idea">
+      <span class="lbl">Why a record, and why unchangeable</span>
+      A record cannot be modified once created. That sounds like a limitation, but it is a safety feature. An algorithm reads the processes and produces a result, but it can never accidentally rewrite its own input. When you run two algorithms on the same processes, you know for certain they saw exactly the same numbers.
+    </div>
+    <p>If you can explain those four fields and why the data is unchangeable, you already understand the foundation everything else is built on.</p>
+  </section>
+
+  <section id="metrics">
+    <h2>3. What we measure</h2>
+    <p>After a scheduler decides the order, we score it with four numbers per process. Every one of them comes straight from a plain definition, so there is nothing to memorise once you see the picture.</p>
+    <table>
+      <tr><th>Number</th><th>Plain definition</th></tr>
+      <tr><td>Completion time</td><td>The clock reading when the process finished.</td></tr>
+      <tr><td>Turnaround time</td><td>Completion time minus arrival time. The total time in the system.</td></tr>
+      <tr><td>Waiting time</td><td>Turnaround time minus burst time. Time spent waiting rather than running.</td></tr>
+      <tr><td>Response time</td><td>The first moment it got the CPU, minus arrival time.</td></tr>
+    </table>
+    <p>The app also reports a few whole run numbers: average waiting time, average turnaround time, CPU utilisation (how much of the time the CPU was busy) and throughput (processes finished per unit of time). Lower waiting times are better, and higher utilisation is better.</p>
+  </section>
+
+  <section id="worked">
+    <h2>4. A worked example by hand</h2>
+    <p>Let us schedule three processes with the simplest rule, First Come First Serve, entirely on paper. This is the example the automated tests also check, so the numbers here are the real numbers the code produces.</p>
+    <table>
+      <tr><th>Process</th><th>Arrival</th><th>Burst</th></tr>
+      <tr><td>P1</td><td>0</td><td>5</td></tr>
+      <tr><td>P2</td><td>1</td><td>3</td></tr>
+      <tr><td>P3</td><td>2</td><td>1</td></tr>
+    </table>
+    <p>First come first serve runs them in arrival order, each to completion:</p>
+    <pre><code>time:  0        5     8   9
+       | P1     | P2  |P3 |
+</code></pre>
+    <ul>
+      <li>P1 runs from 0 to 5. Completion 5. It arrived at 0, so waiting time is 0.</li>
+      <li>P2 runs from 5 to 8. Completion 8. It arrived at 1, so it waited 5 - 1 = 4.</li>
+      <li>P3 runs from 8 to 9. Completion 9. It arrived at 2, so it waited 8 - 2 = 6.</li>
+    </ul>
+    <p>Average waiting time is (0 + 4 + 6) / 3, which is about 3.33. If you run <code>java -jar target/os-scheduler-studio.jar cpu fcfs --processes "P1,0,5; P2,1,3; P3,2,1"</code> you get exactly this. Being able to do one example by hand and match the program is the single best way to prove to yourself, and to anyone asking, that you understand it.</p>
+  </section>
+
+  <section id="one-language">
+    <h2>5. The one idea that keeps it clean</h2>
+    <p>There are 21 algorithms in this project. Without a plan, that would be 21 tangled special cases. The plan is a single small contract that every CPU algorithm agrees to:</p>
+    <pre><code>public interface CpuScheduler {
+    String name();
+    ScheduleResult schedule(List&lt;CpuProcess&gt; processes);
+}</code></pre>
+    <p>An interface is a promise. Any class that says it is a <code>CpuScheduler</code> promises to have a name and to turn a list of processes into a result. It does not say how. Round Robin and Shortest Job First keep that promise in completely different ways, but from the outside they look identical.</p>
+    <div class="callout analogy">
+      <span class="lbl">Everyday analogy</span>
+      A universal remote has the same buttons no matter which brand of television it points at. The buttons are the interface. Behind the scenes each television reacts differently, but you press the same power button every time. In this project the "power button" is <code>schedule(processes)</code>.
+    </div>
+    <div class="callout idea">
+      <span class="lbl">Why this matters</span>
+      Because everything returns the same <code>ScheduleResult</code>, the chart drawing code, the command line tool and the desktop app were written once and work for every algorithm, present and future. Add a new algorithm and the whole app supports it with no extra wiring. This is the difference between code that impresses and code that just works.
+    </div>
+  </section>
+
+  <section id="cpu-build">
+    <h2>6. Building the CPU algorithms</h2>
+    <p>The nine CPU algorithms fall into three groups, and the code follows that grouping exactly.</p>
+
+    <h3>Group one: run to completion (non preemptive)</h3>
+    <p>FCFS, Shortest Job First, Longest Job First, Highest Response Ratio Next and non preemptive priority all work the same way. When the CPU is free they look at everything that has arrived, pick one, and let it run all the way to the end. The only difference between them is <em>which one they pick</em>. So they all share one base class and only fill in a single method:</p>
+    <pre><code>protected abstract CpuProcess select(List&lt;CpuProcess&gt; ready, int currentTime);</code></pre>
+    <table>
+      <tr><th>Algorithm</th><th>Its one rule for picking</th></tr>
+      <tr><td>FCFS</td><td>the one that arrived first</td></tr>
+      <tr><td>Shortest Job First</td><td>the smallest burst time</td></tr>
+      <tr><td>Longest Job First</td><td>the largest burst time</td></tr>
+      <tr><td>Highest Response Ratio Next</td><td>the highest (waiting + burst) / burst</td></tr>
+      <tr><td>Priority</td><td>the smallest priority number</td></tr>
+    </table>
+
+    <h3>Group two: check every tick (preemptive)</h3>
+    <p>Shortest Remaining Time First, Longest Remaining Time First and preemptive priority can interrupt a running process. They advance the clock one unit at a time. At every single tick they look again and run the best process for just one unit. If something better arrives, the next tick switches to it. Again the only difference is the picking rule, so they share a base class with one method.</p>
+
+    <h3>Group three: Round Robin, the special case</h3>
+    <p>Round Robin does not pick a "best" process. It gives everyone a fair turn of fixed length, called the time quantum, and rotates through a queue. Because it cares about queue order rather than a best choice, it has its own implementation.</p>
+
+    <div class="callout idea">
+      <span class="lbl">The pattern to remember</span>
+      Two shared engines plus one special case. If someone asks how nine algorithms fit in so little code, that one sentence is your answer.
+    </div>
+
+    <h3>All nine CPU algorithms in plain words</h3>
+    <p>Here is every CPU algorithm the app offers, each in one plain sentence, with the trap to watch for. This is the cheat sheet to keep in your head.</p>
+    <table>
+      <tr><th>Algorithm</th><th>What it does</th><th>Watch out for</th></tr>
+      <tr><td><b>FCFS</b><br>First Come First Serve</td><td>Runs jobs in the order they arrived, each all the way to the end.</td><td>One long job at the front makes everyone behind it wait. This is called the convoy effect.</td></tr>
+      <tr><td><b>SJF</b><br>Shortest Job First</td><td>When the CPU is free it runs the shortest waiting job. This gives the lowest average waiting time.</td><td>A steady stream of short jobs can leave a long job waiting forever (starvation), and it needs to know burst times up front.</td></tr>
+      <tr><td><b>SRTF</b><br>Shortest Remaining Time First</td><td>The preemptive SJF. If a job arrives that is shorter than what is left of the running one, it switches to it.</td><td>Even lower waiting times, but lots of switching, and long jobs can still starve.</td></tr>
+      <tr><td><b>LJF</b><br>Longest Job First</td><td>Runs the longest waiting job first.</td><td>Mostly a teaching contrast. It produces poor waiting times.</td></tr>
+      <tr><td><b>LRTF</b><br>Longest Remaining Time First</td><td>The preemptive LJF, checked every tick.</td><td>Also mainly a contrast. Long waiting times and a lot of switching.</td></tr>
+      <tr><td><b>HRRN</b><br>Highest Response Ratio Next</td><td>Picks by a ratio that climbs the longer a job waits, so short jobs are favoured but nothing waits forever.</td><td>A fairer SJF, but still non preemptive and still needs burst times.</td></tr>
+      <tr><td><b>Priority</b><br>non-preemptive</td><td>Runs the most important job (smallest priority number) to completion.</td><td>Low priority jobs can starve if important jobs keep arriving.</td></tr>
+      <tr><td><b>Priority</b><br>preemptive</td><td>Same, but a more important job that arrives interrupts a less important one.</td><td>Same starvation risk, plus the cost of switching.</td></tr>
+      <tr><td><b>Round Robin</b></td><td>Everyone gets a fixed time slice (the quantum) in turn, round and round the queue.</td><td>Too small a quantum wastes time switching; too large a quantum turns it back into FCFS.</td></tr>
+    </table>
+  </section>
+
+  <section id="disk">
+    <h2>7. Disk scheduling</h2>
+    <p>A hard disk stores data in circular tracks called cylinders. A single head moves in and out to reach them, and moving the head takes time. Disk scheduling is about servicing a batch of requests while moving the head as little as possible.</p>
+    <div class="callout analogy">
+      <span class="lbl">Everyday analogy</span>
+      A lift in a tall building. People on many floors press the button. The lift could answer them in the order they pressed, but it is far quicker to keep going in one direction and pick people up on the way, then reverse. That is exactly the SCAN algorithm, which is why it is nicknamed the elevator algorithm.
+    </div>
+    <p>The six algorithms differ in how they choose the head's path. FCFS serves requests in order. SSTF always jumps to the nearest one. SCAN, C-SCAN, LOOK and C-LOOK all sweep across the disk, differing in whether they walk to the very edge and whether they jump back or reverse.</p>
+    <figure class="fig">
+      <img src="images/disk-sstf.svg" alt="SSTF seek graph">
+      <figcaption>The seek graph the project draws for Shortest Seek Time First. Cylinder numbers run along the top; the line steps downward showing where the head went, in order.</figcaption>
+    </figure>
+    <p>The score for a disk run is the total head movement, and less is better. A satisfying check is that the code reproduces the standard textbook example exactly: starting at cylinder 53 with the queue 98, 183, 37, 122, 14, 124, 65, 67, FCFS moves 640 cylinders and SSTF moves only 236.</p>
+
+    <h3>All six disk algorithms in plain words</h3>
+    <table>
+      <tr><th>Algorithm</th><th>What it does</th><th>Watch out for</th></tr>
+      <tr><td><b>FCFS</b></td><td>Serves requests in the exact order they were asked.</td><td>Fair, but the head can bounce back and forth across the whole disk.</td></tr>
+      <tr><td><b>SSTF</b><br>Shortest Seek Time First</td><td>Always jumps to the nearest pending request.</td><td>Far away requests can be left waiting for a long time (starvation).</td></tr>
+      <tr><td><b>SCAN</b><br>the elevator</td><td>Sweeps in one direction to the end of the disk servicing on the way, then reverses.</td><td>The far edge of the disk waits the longest between visits.</td></tr>
+      <tr><td><b>C-SCAN</b></td><td>Sweeps one way to the end, jumps straight back to the start, and sweeps the same way again.</td><td>The return jump is extra movement, but waiting times are more even than SCAN.</td></tr>
+      <tr><td><b>LOOK</b></td><td>Like SCAN, but turns around at the last request instead of driving to the disk edge.</td><td>Saves the wasted trips to the ends. Little to watch for; usually better than SCAN.</td></tr>
+      <tr><td><b>C-LOOK</b></td><td>Like C-SCAN, but wraps at the last request rather than the disk edge.</td><td>The efficient and fair choice in practice.</td></tr>
+    </table>
+  </section>
+
+  <section id="page">
+    <h2>8. Page replacement</h2>
+    <p>Programs use more memory than physically fits, so memory is split into slots called frames and the rest lives on disk. When a program needs a page that is not in a frame, that is a <span class="pill">page fault</span>, and the operating system must load it, possibly throwing out another page first. Page replacement is the rule for choosing the victim.</p>
+    <div class="callout analogy">
+      <span class="lbl">Everyday analogy</span>
+      A small desk that only holds three books. When you need a fourth, one has to go back to the shelf. Do you return the one you have not touched in ages (LRU), the one that has sat there longest (FIFO), or the one you will not need again for the longest time (Optimal)? Each choice is a different algorithm.
+    </div>
+    <p>The six algorithms are FIFO, LRU, Optimal, LFU, Clock and MRU. Optimal is special: it looks into the future of the reference string and always makes the best possible choice, so it gives the fewest faults any algorithm ever could. It cannot be used in a real system because you do not know the future, but as a simulation over a known list it is the yardstick everything else is measured against.</p>
+    <figure class="fig">
+      <img src="images/page-comparison.svg" alt="Page faults by algorithm">
+      <figcaption>Page faults for the standard reference string with three frames. Notice Optimal has the fewest, exactly as the theory promises.</figcaption>
+    </figure>
+    <figure class="fig">
+      <img src="images/page-optimal.svg" alt="Optimal page replacement frame grid">
+      <figcaption>The frame by frame grid the project draws. Each column is one reference; a red F is a fault and a green H is a hit.</figcaption>
+    </figure>
+
+    <h3>All six page algorithms in plain words</h3>
+    <table>
+      <tr><th>Algorithm</th><th>What it does</th><th>Watch out for</th></tr>
+      <tr><td><b>FIFO</b><br>First In First Out</td><td>Throws out whichever page has been in memory the longest.</td><td>Simple, but it can suffer Belady's anomaly, where adding more frames causes more faults.</td></tr>
+      <tr><td><b>LRU</b><br>Least Recently Used</td><td>Throws out the page that has gone unused the longest.</td><td>Usually close to optimal and never has Belady's anomaly, but it costs a little to track usage.</td></tr>
+      <tr><td><b>Optimal</b></td><td>Throws out the page that will not be needed for the longest time in the future.</td><td>The fewest faults possible, but impossible in reality because it needs to see the future. Used only as a benchmark.</td></tr>
+      <tr><td><b>LFU</b><br>Least Frequently Used</td><td>Throws out the page referenced the fewest times.</td><td>Good when popularity is stable, but a page popular early can linger long after it stops being used.</td></tr>
+      <tr><td><b>Clock</b><br>Second Chance</td><td>A cheap approximation of LRU using a reference bit and a moving hand.</td><td>What real operating systems actually use. Only approximate, but fast.</td></tr>
+      <tr><td><b>MRU</b><br>Most Recently Used</td><td>Throws out the page used most recently.</td><td>Sounds backwards, but wins for looping scans over a large data set. Bad for the usual "used recently, needed again soon" pattern.</td></tr>
+    </table>
+  </section>
+
+  <section id="pictures">
+    <h2>9. Turning results into pictures</h2>
+    <p>A table of numbers is correct but hard to feel. A Gantt chart is instant to read. The project turns every result into a picture in two ways that share the same layout code.</p>
+    <ul>
+      <li>On the desktop, results are drawn on a JavaFX canvas so you can see them immediately.</li>
+      <li>For reports and this document, results are written out as SVG image files. SVG is just text describing shapes, so the program builds the image by writing lines like <code>&lt;rect .../&gt;</code>. That means the charts in the README are produced by the program itself, not drawn by hand.</li>
+    </ul>
+    <figure class="fig">
+      <img src="images/cpu-srtf.svg" alt="SRTF Gantt chart">
+      <figcaption>A Gantt chart for Shortest Remaining Time First. Each coloured block is a process running; you can see it switching as shorter jobs arrive.</figcaption>
+    </figure>
+  </section>
+
+  <section id="frontends">
+    <h2>10. Two front ends, one core</h2>
+    <p>The project has two ways to use it, and they both sit on top of the same <code>core</code> package.</p>
+    <ul>
+      <li>A <strong>desktop app</strong> built with JavaFX, with three tabs, editable tables, live charts and a compare mode.</li>
+      <li>A <strong>command line tool</strong> that prints text tables and can export images, handy for scripts and reports.</li>
+    </ul>
+    <p>Here is the whole flow in one picture. Everything to the right of the scheduler is shared, which is the payoff of the interface idea from section 5.</p>
+    <div class="fig">
+      <svg viewBox="0 0 720 150" width="100%" role="img" aria-label="Architecture diagram" xmlns="http://www.w3.org/2000/svg">
+        <style>
+          .box{fill:#e8f0fa;stroke:#2563a8;stroke-width:1.5;rx:8;}
+          .lbl{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;fill:#1f2933;text-anchor:middle;}
+          .arw{stroke:#5b6672;stroke-width:1.5;marker-end:url(#a);fill:none;}
+        </style>
+        <defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#5b6672"/></marker></defs>
+        <rect class="box" x="10" y="55" width="120" height="40" rx="8"/><text class="lbl" x="70" y="80">Your processes</text>
+        <rect class="box" x="180" y="55" width="120" height="40" rx="8"/><text class="lbl" x="240" y="80">CpuScheduler</text>
+        <rect class="box" x="350" y="55" width="130" height="40" rx="8"/><text class="lbl" x="415" y="74">ScheduleResult</text><text class="lbl" x="415" y="89" font-size="10">timeline + metrics</text>
+        <rect class="box" x="540" y="10" width="160" height="34" rx="8"/><text class="lbl" x="620" y="31">Text tables (CLI)</text>
+        <rect class="box" x="540" y="58" width="160" height="34" rx="8"/><text class="lbl" x="620" y="79">SVG charts</text>
+        <rect class="box" x="540" y="106" width="160" height="34" rx="8"/><text class="lbl" x="620" y="127">JavaFX canvas (app)</text>
+        <path class="arw" d="M130,75 L178,75"/>
+        <path class="arw" d="M300,75 L348,75"/>
+        <path class="arw" d="M480,72 L538,32"/>
+        <path class="arw" d="M480,75 L538,75"/>
+        <path class="arw" d="M480,78 L538,118"/>
+      </svg>
+    </div>
+  </section>
+
+  <section id="challenges">
+    <h2>11. Challenges and fixes</h2>
+    <p>This is the section that turns a good explanation into a great one. Real projects have real problems. Here are the ones that came up and how each was solved. Being able to tell one of these stories shows you actually understand the work.</p>
+
+    <div class="callout challenge">
+      <span class="lbl">Challenge: two processes tie, and the answer keeps changing</span>
+      When two ready processes have the same burst time, which one runs first? If the code is careless the answer can flip between runs, which makes it impossible to test. <strong>Fix:</strong> the ready list is always sorted by arrival time and then by id, and the selection uses Java's <code>min</code> and <code>max</code>, which keep the first item on a tie. So ties always break the same way, and the results are repeatable.
+    </div>
+
+    <div class="callout challenge">
+      <span class="lbl">Challenge: the CPU sits idle before anything arrives</span>
+      If the first process arrives at time 3, the CPU has nothing to do from 0 to 3. Forgetting this throws off every later number. <strong>Fix:</strong> when nothing has arrived the clock jumps forward to the next arrival and records an explicit "idle" block, so the timeline and the metrics stay honest.
+    </div>
+
+    <div class="callout challenge">
+      <span class="lbl">Challenge: Round Robin queue order is subtle</span>
+      When a time slice ends at the exact moment a new process arrives, who joins the queue first? Getting this wrong gives answers that are close but not quite right. <strong>Fix:</strong> the code follows the common textbook convention. Processes that arrived during the slice are added to the queue first, and only then is the interrupted process placed at the back.
+    </div>
+
+    <div class="callout challenge">
+      <span class="lbl">Challenge: preemptive charts were a mess of tiny blocks</span>
+      The preemptive algorithms decide one time unit at a time, so they naturally produce a long row of one unit blocks for the same process. <strong>Fix:</strong> a small merge step joins neighbouring blocks that share a label, turning many one unit slivers into a few clean bars before anything is drawn.
+    </div>
+
+    <div class="callout challenge">
+      <span class="lbl">Challenge: keeping every metric consistent</span>
+      If each algorithm computed its own waiting and turnaround times, one small mistake could hide in one algorithm. <strong>Fix:</strong> every algorithm hands its finished timeline to one shared piece of code that computes all four metrics. There is exactly one place that does the arithmetic, so if it is right once it is right everywhere.
+    </div>
+
+    <div class="callout challenge">
+      <span class="lbl">Challenge: an empty frame versus the page numbered zero</span>
+      In page replacement, how do you tell an empty slot apart from a slot holding page number 0? <strong>Fix:</strong> frames are stored as boxed integers where an empty slot is <code>null</code>, which is clearly different from the value <code>0</code>.
+    </div>
+
+    <div class="callout challenge">
+      <span class="lbl">Challenge: SCAN and LOOK look almost the same</span>
+      SCAN drives the head all the way to the physical edge of the disk before reversing, while LOOK turns around at the last actual request. The difference is small in code but changes the total movement. <strong>Fix:</strong> the sweep algorithms are written carefully so SCAN adds the disk edge as a turning point and LOOK does not, and both are checked against textbook totals in the tests.
+    </div>
+
+    <div class="callout challenge">
+      <span class="lbl">Challenge: the desktop app would not launch cleanly</span>
+      Launching a JavaFX class directly can fail with a confusing "runtime components missing" error. <strong>Fix:</strong> a tiny separate <code>Launcher</code> class starts the app, which is the reliable pattern, and the desktop app is run with <code>mvn javafx:run</code>.
+    </div>
+
+    <div class="callout idea">
+      <span class="lbl">The safety net over all of it</span>
+      35 automated tests check the algorithms against numbers worked out by hand and against standard textbook examples. If a future change breaks something, a test turns red immediately. That is why you can trust the results in this document.
+    </div>
+  </section>
+
+  <section id="explain">
+    <h2>12. How to explain it out loud</h2>
+    <p>Here is a 30 second summary you can say from memory, followed by answers to the questions people usually ask.</p>
+    <div class="callout idea">
+      <span class="lbl">The 30 second pitch</span>
+      "OS Scheduler Studio is a Java app that simulates the operating system scheduling algorithms, CPU, disk and page replacement, and draws them as charts. The clever part is that every algorithm shares one small interface, so the same core powers a desktop app, a command line tool and the tests. It reproduces the standard textbook results exactly, and it is covered by automated tests."
+    </div>
+
+    <div class="qa">
+      <p class="q">Q: Why did you use an interface for the algorithms?</p>
+      <p>So the rest of the app never needs special cases. Everything returns the same result type, which means the charts, the command line and the app were written once and work for all 21 algorithms.</p>
+    </div>
+    <div class="qa">
+      <p class="q">Q: What is the difference between preemptive and non preemptive?</p>
+      <p>Non preemptive lets a process run to completion once it starts. Preemptive can interrupt it if something better comes along. Shortest Job First is non preemptive; its preemptive twin is Shortest Remaining Time First.</p>
+    </div>
+    <div class="qa">
+      <p class="q">Q: Which CPU algorithm is best?</p>
+      <p>For the lowest average waiting time, Shortest Remaining Time First wins, but it can starve long jobs and it switches often. Round Robin is fairer and better for interactive use. There is no single winner, which is exactly why the app lets you compare them.</p>
+    </div>
+    <div class="qa">
+      <p class="q">Q: Why is Optimal page replacement impossible in real life?</p>
+      <p>It needs to know which pages will be used in the future. A real system cannot see the future, so Optimal is only useful as a benchmark for how well the practical algorithms do.</p>
+    </div>
+    <div class="qa">
+      <p class="q">Q: How do you know the results are correct?</p>
+      <p>The tests compare the output against values worked out by hand and against well known textbook examples, like the disk queue starting at cylinder 53 and the standard page reference string.</p>
+    </div>
+  </section>
+
+  <section id="glossary">
+    <h2>13. Glossary</h2>
+    <table>
+      <tr><th>Term</th><th>Meaning</th></tr>
+      <tr><td>Process</td><td>A program that needs CPU time, described here by arrival, burst and priority.</td></tr>
+      <tr><td>Burst time</td><td>How long a process needs the CPU.</td></tr>
+      <tr><td>Preemptive</td><td>Able to interrupt a running process to switch to another.</td></tr>
+      <tr><td>Gantt chart</td><td>A timeline showing which process ran during each stretch of time.</td></tr>
+      <tr><td>Time quantum</td><td>The fixed slice of time each process gets under Round Robin.</td></tr>
+      <tr><td>Cylinder</td><td>A track on a disk that the head moves to reach.</td></tr>
+      <tr><td>Seek</td><td>Moving the disk head, which costs time.</td></tr>
+      <tr><td>Frame</td><td>A slot in memory that holds one page.</td></tr>
+      <tr><td>Page fault</td><td>A request for a page that is not currently in a frame.</td></tr>
+      <tr><td>Interface</td><td>A promise about what methods a class has, without saying how they work.</td></tr>
+    </table>
+    <p>Read this page once, run the worked example yourself, and try one algorithm in the app. After that you will be able to explain any part of the project to anyone who asks.</p>
+  </section>
+
+  </main>
+</div>
+</div>
+
+<footer>
+  <div class="wrap">OS Scheduler Studio. Built by Yogi Makadiya. This walkthrough is part of the project so anyone can learn it from zero.</div>
+</footer>
+</body>
+</html>
