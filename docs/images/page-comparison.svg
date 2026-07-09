@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="286" viewBox="0 0 700 286" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <rect x="0" y="0" width="700" height="286" rx="14" fill="#111827"/>
+  <text x="20" y="34" fill="#f9fafb" font-size="18" font-weight="700">Page faults by algorithm (lower is better)</text>
+  <text x="198" y="75" fill="#e5e7eb" font-size="14" text-anchor="end">FIFO</text>
+  <rect x="210" y="58" width="394" height="22" rx="5" fill="#4f9dde"/>
+  <text x="612" y="75" fill="#9ca3af" font-size="13">15.00</text>
+  <text x="198" y="109" fill="#e5e7eb" font-size="14" text-anchor="end">LRU</text>
+  <rect x="210" y="92" width="315" height="22" rx="5" fill="#e8703a"/>
+  <text x="533" y="109" fill="#9ca3af" font-size="13">12.00</text>
+  <text x="198" y="143" fill="#e5e7eb" font-size="14" text-anchor="end">Optimal</text>
+  <rect x="210" y="126" width="236" height="22" rx="5" fill="#57b26a"/>
+  <text x="454" y="143" fill="#9ca3af" font-size="13">9.00</text>
+  <text x="198" y="177" fill="#e5e7eb" font-size="14" text-anchor="end">LFU</text>
+  <rect x="210" y="160" width="341" height="22" rx="5" fill="#c65cd6"/>
+  <text x="559" y="177" fill="#9ca3af" font-size="13">13.00</text>
+  <text x="198" y="211" fill="#e5e7eb" font-size="14" text-anchor="end">Clock</text>
+  <rect x="210" y="194" width="368" height="22" rx="5" fill="#e0c341"/>
+  <text x="586" y="211" fill="#9ca3af" font-size="13">14.00</text>
+  <text x="198" y="245" fill="#e5e7eb" font-size="14" text-anchor="end">MRU</text>
+  <rect x="210" y="228" width="420" height="22" rx="5" fill="#3ec9c0"/>
+  <text x="638" y="245" fill="#9ca3af" font-size="13">16.00</text>
+</svg>

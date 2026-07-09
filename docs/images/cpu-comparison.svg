@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="388" viewBox="0 0 700 388" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <rect x="0" y="0" width="700" height="388" rx="14" fill="#111827"/>
+  <text x="20" y="34" fill="#f9fafb" font-size="18" font-weight="700">Average waiting time by algorithm (lower is better)</text>
+  <text x="198" y="75" fill="#e5e7eb" font-size="14" text-anchor="end">First Come First Serve</text>
+  <rect x="210" y="58" width="249" height="22" rx="5" fill="#4f9dde"/>
+  <text x="467" y="75" fill="#9ca3af" font-size="13">5.80</text>
+  <text x="198" y="109" fill="#e5e7eb" font-size="14" text-anchor="end">Shortest Job First</text>
+  <rect x="210" y="92" width="206" height="22" rx="5" fill="#e8703a"/>
+  <text x="424" y="109" fill="#9ca3af" font-size="13">4.80</text>
+  <text x="198" y="143" fill="#e5e7eb" font-size="14" text-anchor="end">Shortest Remaining Time First</text>
+  <rect x="210" y="126" width="163" height="22" rx="5" fill="#57b26a"/>
+  <text x="381" y="143" fill="#9ca3af" font-size="13">3.80</text>
+  <text x="198" y="177" fill="#e5e7eb" font-size="14" text-anchor="end">Longest Job First</text>
+  <rect x="210" y="160" width="291" height="22" rx="5" fill="#c65cd6"/>
+  <text x="509" y="177" fill="#9ca3af" font-size="13">6.80</text>
+  <text x="198" y="211" fill="#e5e7eb" font-size="14" text-anchor="end">Longest Remaining Time First</text>
+  <rect x="210" y="194" width="420" height="22" rx="5" fill="#e0c341"/>
+  <text x="638" y="211" fill="#9ca3af" font-size="13">9.80</text>
+  <text x="198" y="245" fill="#e5e7eb" font-size="14" text-anchor="end">Highest Response Ratio Next</text>
+  <rect x="210" y="228" width="214" height="22" rx="5" fill="#3ec9c0"/>
+  <text x="432" y="245" fill="#9ca3af" font-size="13">5.00</text>
+  <text x="198" y="279" fill="#e5e7eb" font-size="14" text-anchor="end">Priority (non-preemptive)</text>
+  <rect x="210" y="262" width="274" height="22" rx="5" fill="#e2688f"/>
+  <text x="492" y="279" fill="#9ca3af" font-size="13">6.40</text>
+  <text x="198" y="313" fill="#e5e7eb" font-size="14" text-anchor="end">Priority (preemptive)</text>
+  <rect x="210" y="296" width="257" height="22" rx="5" fill="#9b8cf0"/>
+  <text x="475" y="313" fill="#9ca3af" font-size="13">6.00</text>
+  <text x="198" y="347" fill="#e5e7eb" font-size="14" text-anchor="end">Round Robin (q=2)</text>
+  <rect x="210" y="330" width="291" height="22" rx="5" fill="#4f9dde"/>
+  <text x="509" y="347" fill="#9ca3af" font-size="13">6.80</text>
+</svg>

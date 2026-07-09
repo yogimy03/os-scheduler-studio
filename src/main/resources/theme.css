@@ -1,0 +1,161 @@
+/*
+ * A single dark theme for the whole app.
+ *
+ * The trick that does most of the work is setting -fx-base to a dark colour on
+ * the root. JavaFX derives the shades of most controls from that one value, so
+ * buttons, drop downs, spinners and tables all turn dark together. The rules
+ * below then add the accent colour and a handful of custom widgets.
+ */
+
+.root {
+    -fx-base: #1b2430;
+    -fx-background: #111827;
+    -fx-control-inner-background: #1f2937;
+    -fx-control-inner-background-alt: #232f3e;
+    -fx-accent: #4f9dde;
+    -fx-focus-color: #4f9dde;
+    -fx-faint-focus-color: #4f9dde22;
+    -fx-text-background-color: #e5e7eb;
+    -fx-font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    -fx-font-size: 13px;
+}
+
+.app-root {
+    -fx-background-color: #111827;
+}
+
+.app-header {
+    -fx-background-color: linear-gradient(to right, #1f3350, #111827);
+    -fx-border-color: transparent transparent #2b3648 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.app-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f9fafb;
+}
+
+.app-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: #9ca3af;
+}
+
+.pane {
+    -fx-background-color: #111827;
+}
+
+.section-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f9fafb;
+}
+
+.field-label {
+    -fx-text-fill: #9ca3af;
+}
+
+.summary {
+    -fx-text-fill: #cbd5e1;
+    -fx-font-size: 13px;
+}
+
+.error {
+    -fx-text-fill: #f87171;
+    -fx-font-size: 13px;
+}
+
+/* Buttons */
+.button {
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-text-fill: #e5e7eb;
+}
+
+.button.primary {
+    -fx-background-color: #4f9dde;
+    -fx-text-fill: #0b1220;
+    -fx-font-weight: bold;
+}
+
+.button.primary:hover {
+    -fx-background-color: #6bb0e8;
+}
+
+/* Tabs */
+.tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: #0f1625;
+}
+
+.tab-pane .tab {
+    -fx-background-color: #1a2434;
+    -fx-background-radius: 8 8 0 0;
+    -fx-padding: 6 16 6 16;
+}
+
+.tab-pane .tab:selected {
+    -fx-background-color: #24344c;
+}
+
+.tab-pane .tab .tab-label {
+    -fx-text-fill: #cbd5e1;
+    -fx-font-size: 14px;
+}
+
+.tab-pane .tab:selected .tab-label {
+    -fx-text-fill: #f9fafb;
+    -fx-font-weight: bold;
+}
+
+/* Chart area */
+.chart-scroll {
+    -fx-background-color: #0b1220;
+    -fx-background: #0b1220;
+    -fx-border-color: #2b3648;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.chart-scroll > .viewport {
+    -fx-background-color: #0b1220;
+}
+
+/* Table headers a touch darker than the rows */
+.table-view .column-header-background {
+    -fx-background-color: #16202f;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #cbd5e1;
+    -fx-font-weight: bold;
+}
+
+/* Page replacement grid cells */
+.page-cell {
+    -fx-background-color: #1f2937;
+    -fx-border-color: #0b1220;
+    -fx-border-width: 1;
+    -fx-text-fill: #e5e7eb;
+    -fx-font-size: 13px;
+}
+
+.page-cell.header,
+.page-cell.corner {
+    -fx-background-color: #16202f;
+    -fx-text-fill: #9ca3af;
+    -fx-font-weight: bold;
+}
+
+.page-cell.strong {
+    -fx-font-weight: bold;
+}
+
+.page-cell.fault {
+    -fx-background-color: #7f1d1d;
+    -fx-text-fill: #fee2e2;
+}
+
+.page-cell.hit {
+    -fx-background-color: #14532d;
+    -fx-text-fill: #dcfce7;
+}
